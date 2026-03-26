@@ -1,0 +1,121 @@
+.chatting-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 80px); /* 전체 높이 사용 */
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.chat-window {
+  flex: 1;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  padding: 30px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.chat-line {
+  display: flex;
+  gap: 12px;
+  max-width: 80%;
+}
+
+.chat-line.bot {
+  align-self: flex-start;
+}
+
+.chat-line.user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.chat-line .avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  border: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.chat-line.bot .avatar {
+  background-color: #e0e7ff;
+  color: #4f46e5;
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+.chat-bubble {
+  padding: 14px 18px;
+  border-radius: 12px;
+  line-height: 1.6;
+  font-size: 15px;
+}
+
+.chat-line.bot .chat-bubble {
+  background: #f8fafc;
+  color: #1f2937;
+  border: 1px solid #e2e8f0;
+  border-top-left-radius: 2px;
+}
+
+.chat-line.user .chat-bubble {
+  background: #4f46e5;
+  color: #ffffff;
+  border-top-right-radius: 2px;
+  font-weight: 500;
+}
+
+.chat-bubble.typing {
+  color: #cbd5e1;
+  padding: 10px 18px;
+}
+
+/* 입력창 */
+.chat-input-area {
+  display: flex;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 10px 15px;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.chat-input-area input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 10px;
+  font-size: 16px;
+  outline: none;
+  color: #111827;
+}
+
+.chat-input-area input::placeholder { color: #94a3b8; }
+
+.chat-input-area button {
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.chat-input-area button:hover {
+  background: #3730a3;
+}
