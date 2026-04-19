@@ -1,0 +1,16 @@
+app:
+  applicationId: ${SH_APPLICATION_ID}
+  env: ${SH_ENVIRONMENT:-Development}
+  host: ${SH_APP_HOST:-http://juiceshop:3000}
+
+hawk:
+  spider:
+    base: true
+    ajax: true
+    maxDurationMinutes: 2
+
+tags:
+  - name: scanner
+    value: stackhawk
+  - name: deployment
+    value: local-docker

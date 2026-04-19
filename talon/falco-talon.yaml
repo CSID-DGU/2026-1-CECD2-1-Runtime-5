@@ -1,0 +1,16 @@
+# 메인 설정
+listen_address: "0.0.0.0"
+listen_port: 2803
+
+# 로컬 Docker 환경에서는 Kubernetes leader election을 비활성화해야 한다.
+deduplication:
+  leader_election: false
+  time_window_seconds: 5
+
+watch_rules: true
+print_all_events: true
+
+# 알림 및 로그 설정 (필요시)
+notifiers:
+  stdout:
+    enabled: true

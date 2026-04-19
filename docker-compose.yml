@@ -1,0 +1,111 @@
+services:
+  # 1. 공격 대상 (Juice Shop)
+  juiceshop:
+    image: bkimminich/juice-shop
+    container_name: juice-shop
+    ports:
+      - "3000:3000"
+    restart: always
+
+  # 2. 분석 엔진 (Ollama)
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=5m # 5분간 미사용 시 메모리에서 모델 제거
+    deploy:
+      resources:
+        limits:
+          memory: 4G # RAM 절반만 사용하도록 제한
+    restart: unless-stopped
+
+  # 3. 탐지기 (Falco) - 특권 권한 및 볼륨 마운트 필수
+  falco:
+    image: falcosecurity/falco:latest
+    container_name: falco
+    privileged: true
+    volumes:
+      - ./falco/forward-to-sidekick.yaml:/etc/falco/config.d/zz-forward-to-sidekick.yaml:ro
+      - ./falco/falco_rules.local.yaml:/etc/falco/falco_rules.local.yaml:ro
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - /dev:/host/dev
+      - /proc:/host/proc:ro
+      - /boot:/host/boot:ro
+      - /lib/modules:/host/lib/modules:ro
+      - /usr:/host/usr:ro
+    restart: always
+
+  falco-e2e-test:
+    image: nginx:alpine
+    container_name: falco-e2e-test
+    restart: unless-stopped
+
+  # 4. 대응 엔진 (Talon)
+  talon:
+    image: falcosecurity/falco-talon:latest
+    container_name: falco-talon
+    command: server -c /etc/falco-talon/falco-talon.yaml -r /etc/falco-talon/rules.yaml
+    volumes:
+      - ./talon:/etc/falco-talon
+    depends_on:
+      - falco
+    restart: unless-stopped
+
+# 시각적 UI는 빼고, 중계기 엔진만 설치
+  falcosidekick:
+    image: falcosecurity/falcosidekick:latest
+    container_name: falcosidekick
+    environment:
+      - DEBUG=true
+      # 중계기(Python 스크립트) 주소 설정
+      - WEBHOOK_ADDRESS=http://python-bridge:5000/webhook 
+    depends_on:
+      - falco
+    restart: unless-stopped
+  # bridge 
+  python-bridge:
+    build: ./bridge
+    container_name: python-bridge
+    ports:
+      - "5000:5000"
+    environment:
+      - ENABLE_REMEDIATION=true
+      - REMEDIATION_DRY_RUN=false
+      - REMEDIATION_EXCLUDE=falco,falcosidekick,python-bridge,ollama
+      - DATA_DIR=/app/data
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./bridge_data:/app/data
+    depends_on:
+      - ollama
+      - falco-e2e-test
+    restart: unless-stopped
+
+  traffic-simulator:
+    build: ./simulator
+    container_name: traffic-simulator
+    working_dir: /home/opc/security-research
+    environment:
+      - TARGET_URL=http://juiceshop:3000
+      - WEBHOOK_URL=http://python-bridge:5000/webhook
+      - FALCO_TARGET_CONTAINER=falco-e2e-test
+      - LOG_DIR=./attack_logs
+      - MIN_SLEEP_SECONDS=10
+      - MAX_SLEEP_SECONDS=45
+      - ITERATIONS=-1
+      - ENABLE_ZAP=true
+      - ZAP_EVERY_N_CYCLES=30
+    volumes:
+      - .:/home/opc/security-research
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - juiceshop
+      - python-bridge
+      - falco
+      - falcosidekick
+      - falco-e2e-test
+    restart: unless-stopped

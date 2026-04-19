@@ -1,0 +1,13 @@
+- rule: Codex E2E Shell Trigger
+  desc: Deterministic test rule to validate Falco to Falcosidekick to python-bridge flow
+  condition: >
+    evt.type in (execve, execveat) and
+    container and
+    container.name=falco-e2e-test and
+    proc.name=sh and
+    proc.cmdline contains "codex-e2e-trigger"
+  output: >
+    Codex E2E shell trigger detected
+    (container=%container.name command=%proc.cmdline user=%user.name)
+  priority: CRITICAL
+  tags: [container, codex, mitre_execution]

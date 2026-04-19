@@ -1,0 +1,30 @@
+# OS/editor noise
+.DS_Store
+Thumbs.db
+
+# Local tool state
+.codex
+.tmp_remote_inspect/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+
+# Local model data and credentials
+ollama_data/
+
+# Generated runtime data
+attack_logs/*.jsonl
+bridge_data/*.jsonl
+bridge_data/*.csv
+bridge_data/*.png
+
+# Generated scan reports
+zap_reports/*.html
+zap_reports/*.json
+zap_reports/*.md
