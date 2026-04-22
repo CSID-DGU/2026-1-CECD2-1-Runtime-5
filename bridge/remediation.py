@@ -32,6 +32,8 @@ class DockerRemediator:
 
     def remediate(self, payload: dict[str, Any]) -> dict[str, Any]:
         decision = self._classify(payload)
+        if decision == "safe":
+            return {"status": "safe", "reason": "Known safe system activity"}
         if not decision:
             return {"status": "ignored", "reason": "No MITRE mapping matched"}
 
@@ -125,10 +127,15 @@ class DockerRemediator:
                 "mitre": decision.__dict__,
             }
 
-    def _classify(self, payload: dict[str, Any]) -> RemediationDecision | None:
+    def _classify(self, payload: dict[str, Any]) -> RemediationDecision | str | None:
         rule_name = str(payload.get("rule", "")).lower()
         output = str(payload.get("output", "")).lower()
         priority = str(payload.get("priority", "")).lower()
+
+        # [추가] 명백히 안전한 정상 시스템 활동 (LLM 전송 방지)
+        safe_rules = ["package management process", "read shell configuration file", "linux kernel version", "system uptime", "process status"]
+        if any(r in rule_name for r in safe_rules):
+            return "safe"
 
         if "terminal shell in container" in rule_name or "terminal shell in container" in output:
             return RemediationDecision(
@@ -136,6 +143,35 @@ class DockerRemediator:
                 technique_name="Command and Scripting Interpreter",
                 action="stop",
                 reason="Interactive shell execution detected inside container",
+            )
+
+        # [추가] 민감 파일 접근 탐지
+        sensitive_files = ["/etc/shadow", "/etc/passwd", "/root/.ssh", "id_rsa"]
+        if any(f in output for f in sensitive_files):
+            return RemediationDecision(
+                technique_id="T1555",
+                technique_name="Credentials from Password Stores",
+                action="stop",
+                reason="Access to sensitive credential files detected",
+            )
+
+        # [추가] 공격 도구 및 네트워크 스캔 탐지
+        attack_tools = ["nmap ", "netcat ", "nc -", "sqlmap", "ncat "]
+        if any(tool in output for tool in attack_tools):
+            return RemediationDecision(
+                technique_id="T1595",
+                technique_name="Active Scanning",
+                action="pause",
+                reason="Known attack or scanning tool detected",
+            )
+
+        # [추가] 로그 삭제 시도 탐지
+        if "rm " in output and "/var/log" in output:
+            return RemediationDecision(
+                technique_id="T1070",
+                technique_name="Indicator Removal",
+                action="stop",
+                reason="Attempt to clear system logs detected",
             )
 
         if "codex e2e shell trigger" in rule_name or "codex e2e shell trigger" in output:

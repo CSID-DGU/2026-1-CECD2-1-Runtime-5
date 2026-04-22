@@ -3,6 +3,8 @@ import os
 import datetime
 import json
 import time
+import re
+import sqlite3
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse
 import httpx
@@ -17,35 +19,53 @@ app = FastAPI()
 DATA_DIR = os.getenv("DATA_DIR", "/app/data")
 CSV_FILE = os.path.join(DATA_DIR, "security_stats.csv")
 GRAPH_FILE = os.path.join(DATA_DIR, "research_graph.png")
-RAW_EVENTS_FILE = os.path.join(DATA_DIR, "falco_events.jsonl")
+DB_FILE = os.path.join(DATA_DIR, "llm_cache.db")
 OLLAMA_URL = "http://ollama:11434/api/generate"
 remediator = DockerRemediator()
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# CSV 초기화 (파일이 없으면 헤더 작성)
+# --- SQLite 초기화 ---
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS cache 
+                 (normalized_log TEXT PRIMARY KEY, score INTEGER, reason TEXT, 
+                  p_tokens INTEGER, c_tokens INTEGER)''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+def get_cached_result(normalized_log):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT score, reason FROM cache WHERE normalized_log=?", (normalized_log,))
+    row = c.fetchone()
+    conn.close()
+    return row
+
+def save_to_cache(normalized_log, score, reason, p, c):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("INSERT OR REPLACE INTO cache VALUES (?, ?, ?, ?, ?)", 
+                   (normalized_log, score, reason, p, c))
+    conn.commit()
+    conn.close()
+
+# --- 로그 정규화 함수 ---
+def normalize_log(text: str) -> str:
+    """로그에서 가변적인 값(HEX 주소, PID, 경로 내 숫자)을 제거하여 캐시 효율 증대"""
+    text = re.sub(r"0x[0-9a-fA-F]+", "[HEX]", text) # Hex 주소
+    text = re.sub(r"\b\d+\b", "[ID]", text)       # 숫자(PID 등)
+    text = re.sub(r"(/[a-zA-Z0-9._-]+)+", "[PATH]", text) # 경로 단순화 (선택적)
+    return text.strip()
+
+# CSV 초기화
 if not os.path.exists(CSV_FILE):
     with open(CSV_FILE, mode='w', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow([
-            "timestamp",
-            "event_type",
-            "rule_name",
-            "priority",
-            "prompt_tokens",
-            "completion_tokens",
-            "latency_ms",
-            "remediation_status",
-            "remediation_action",
-            "mitre_technique",
-            "target_container",
-            "attack_source",
-            "attack_label",
-            "attack_id",
-            "container_id",
-            "container_image",
-            "event_source",
-        ])
+        writer.writerow(["timestamp", "event_type", "rule_name", "priority", "prompt_tokens", "completion_tokens", "latency_ms", "remediation_status", "remediation_action", "mitre_technique", "target_container", "attack_source", "attack_label", "attack_id", "container_id", "container_image", "event_source", "is_cached"])
 
 @app.post("/webhook")
 async def handle_falco_alert(request: Request):
@@ -57,68 +77,48 @@ async def handle_falco_alert(request: Request):
     output = payload.get("output", "")
     correlation = extract_correlation_fields(payload)
     
-    event_type = "Rule-based"
-    p_tokens, c_tokens = 0, 0
     remediation_result = remediator.remediate(payload)
+    status = remediation_result.get("status", "unknown")
     
-    # 1. 높은 심각도 이벤트는 수집기에서 먼저 분류한다.
-    if priority == "Critical":
-        event_type = "Rule-based (Remediation)"
-    else:
-        # 2. 그 외는 LLM 호출
+    event_type = "Rule-based"
+    p_tokens, c_tokens, is_cached = 0, 0, 0
+
+    if status == "ignored":
         event_type = "LLM-analyzed"
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(OLLAMA_URL, json={
-                "model": "qwen2.5:0.5b",
-                "prompt": f"Score this log (0-10): {output}",
-                "stream": False
-            }, timeout=30.0)
-            res_json = resp.json()
-            p_tokens = res_json.get("prompt_eval_count", 0)
-            c_tokens = res_json.get("eval_count", 0)
+        norm_log = normalize_log(output)
+        cached = get_cached_result(norm_log)
+        
+        if cached:
+            is_cached = 1
+        else:
+            async with httpx.AsyncClient() as client:
+                # 최적화된 프롬프트: JSON 출력 강제하여 출력 토큰 절약
+                prompt = f"Analyze Falco log. Return ONLY JSON {{'score':0-10, 'reason':'1sentence'}}. Log: {norm_log}"
+                try:
+                    resp = await client.post(OLLAMA_URL, json={
+                        "model": "qwen2.5:0.5b",
+                        "prompt": prompt,
+                        "stream": False,
+                        "format": "json" # Ollama에서 JSON 출력을 보장하는 옵션
+                    }, timeout=15.0)
+                    res_json = resp.json()
+                    p_tokens = res_json.get("prompt_eval_count", 0)
+                    c_tokens = res_json.get("eval_count", 0)
+                    
+                    # 결과 파싱 및 저장 (간소화)
+                    llm_data = json.loads(res_json.get("response", "{}"))
+                    save_to_cache(norm_log, llm_data.get("score", 0), llm_data.get("reason", ""), p_tokens, c_tokens)
+                except Exception as e:
+                    print(f"LLM Error: {e}")
 
-    latency = int((time.time() - start_time) * 1000) # 밀리초 단위
+    latency = int((time.time() - start_time) * 1000)
 
-    with open(RAW_EVENTS_FILE, mode="a", encoding="utf-8") as raw_file:
-        raw_file.write(json.dumps({
-            "timestamp": datetime.datetime.now().isoformat(),
-            "payload": payload,
-            "correlation": correlation,
-            "remediation": remediation_result,
-            "event_type": event_type,
-            "latency_ms": latency,
-        }, ensure_ascii=True) + "\n")
-
-    # 3. CSV에 실시간 기록
     with open(CSV_FILE, mode='a', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow([
-            datetime.datetime.now().isoformat(),
-            event_type,
-            rule_name,
-            priority,
-            p_tokens,
-            c_tokens,
-            latency,
-            remediation_result.get("status", "unknown"),
-            remediation_result.get("action", ""),
-            remediation_result.get("mitre", {}).get("technique_id", ""),
-            remediation_result.get("target", ""),
-            correlation["attack_source"],
-            correlation["attack_label"],
-            correlation["attack_id"],
-            correlation["container_id"],
-            correlation["container_image"],
-            correlation["event_source"],
-        ])
+        writer.writerow([datetime.datetime.now().isoformat(), event_type, rule_name, priority, p_tokens, c_tokens, latency, status, remediation_result.get("action", ""), remediation_result.get("mitre", {}).get("technique_id", ""), remediation_result.get("target", ""), correlation["attack_source"], correlation["attack_label"], correlation["attack_id"], correlation["container_id"], correlation["container_image"], correlation["event_source"], is_cached])
 
-    return {
-        "status": "success",
-        "event": event_type,
-        "remediation": remediation_result,
-    }
+    return {"status": "success", "cached": bool(is_cached)}
 
-# 그래프 생성 및 다운로드 엔드포인트
 @app.get("/generate-graph")
 def generate_graph():
     if not os.path.exists(CSV_FILE):
@@ -126,7 +126,7 @@ def generate_graph():
 
     df = pd.read_csv(CSV_FILE)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
-    
+
     # 누적 토큰 사용량 계산
     df['total_tokens'] = df['prompt_tokens'] + df['completion_tokens']
     df['cumulative_tokens'] = df['total_tokens'].cumsum()
@@ -141,11 +141,12 @@ def generate_graph():
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
-    
+
     plt.savefig(GRAPH_FILE)
     plt.close()
-    
+
     return FileResponse(GRAPH_FILE, media_type="image/png", filename=GRAPH_FILE)
+
 
 # CSV 파일 다운로드 엔드포인트
 @app.get("/download-csv")
