@@ -1,3 +1,7 @@
+import logging
+import os
+
+import httpx
 from fastapi import APIRouter
 from database import get_connection
 from services.playbook_service import get_playbook, get_similar_playbooks, save_playbook
@@ -5,6 +9,26 @@ from services.llm_service import analyze_event
 from time_utils import now_iso
 
 router = APIRouter()
+logger = logging.getLogger("backend.events")
+BRIDGE_URL = os.getenv("BRIDGE_URL", "http://bridge:5000")
+
+
+def _request_remediation(container_name: str, action: str = "stop"):
+    if not container_name:
+        logger.info("Remediation skipped: empty container name")
+        return None
+
+    try:
+        resp = httpx.post(
+            f"{BRIDGE_URL}/remediate",
+            json={"container_name": container_name, "action": action},
+            timeout=10.0,
+        )
+        resp.raise_for_status()
+        return resp.json()
+    except httpx.HTTPError as exc:
+        logger.error("Remediation request failed for %s: %s", container_name, exc)
+        return None
 
 
 @router.get("/events")
@@ -60,6 +84,8 @@ def patch_decision(event_id: str, body: dict):
     decision = body.get("decision")
     manual_action = body.get("manual_action")
     conn = get_connection()
+    remediation_container = None
+    remediation_action = "stop"
 
     if decision == "CONFIRMED":
         row = conn.execute(
@@ -71,10 +97,17 @@ def patch_decision(event_id: str, body: dict):
                 action=row["llm_action"],
                 insight=row["llm_insight"]
             )
+            actions = {row["llm_action"], row["manual_action"], manual_action}
+            if "restart" in actions:
+                remediation_container = row["container"]
+                remediation_action = "restart"
+            elif "stop" in actions:
+                remediation_container = row["container"]
         conn.execute(
             "UPDATE events SET status = 'CONFIRMED', manual_action = NULL WHERE id = ?", (event_id,)
         )
     elif decision == "ROLLED_BACK":
+        row = None
         if manual_action:
             row = conn.execute(
                 "SELECT * FROM events WHERE id = ?", (event_id,)
@@ -86,6 +119,9 @@ def patch_decision(event_id: str, body: dict):
                     insight=row["llm_insight"],
                     approved_by="security_engineer",
                 )
+                if manual_action in {"restart", "stop"}:
+                    remediation_container = row["container"]
+                    remediation_action = manual_action
         conn.execute(
             "UPDATE events SET status = 'ROLLED_BACK', manual_action = ? WHERE id = ?",
             (manual_action, event_id),
@@ -93,7 +129,17 @@ def patch_decision(event_id: str, body: dict):
 
     conn.commit()
     conn.close()
-    return {"ok": True, "decision": decision, "manual_action": manual_action}
+    remediation_result = (
+        _request_remediation(remediation_container, remediation_action)
+        if remediation_container
+        else None
+    )
+    return {
+        "ok": True,
+        "decision": decision,
+        "manual_action": manual_action,
+        "remediation": remediation_result,
+    }
 
 
 @router.post("/llm/analyze")

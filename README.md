@@ -1,7 +1,7 @@
 # Runtime Security Service
 
 컨테이너 런타임 보안 이벤트 탐지 및 자동 대응 서비스.  
-Falco가 위협을 탐지하면 LLM이 action을 추천하고, 보안 담당자가 승인한 결과는 Playbook으로 축적되어 이후 동일 공격에 LLM 없이 즉시 분석·추천합니다.
+Falco가 위협을 탐지하면 LLM이 action을 추천하고, 보안 담당자가 승인한 결과는 Playbook으로 축적되어 이후 동일 공격에 LLM 없이 즉시 탐지·대응합니다.
 
 ---
 
@@ -27,6 +27,9 @@ Falco 탐지 → Falcosidekick → bridge /webhook
 backend /llm/analyze
   ├─ Playbook 정확 매칭 → action/insight 재사용 (LLM 호출 생략)
   └─ 매칭 없음 → Chroma VectorDB 유사 Playbook 검색 → LLM 추천
+  ↓
+action이 stop이면 bridge가 Docker SDK로 즉시 컨테이너 중지
+  └─ REMEDIATION_DRY_RUN=true이면 실제 실행 없이 로그만 출력
   ↓
 backend /events/ingest 저장
   ↓
@@ -70,8 +73,16 @@ CHROMA_COLLECTION=runtime_playbooks
 
 ### 1. 백엔드 파이프라인
 
+기본값은 dry-run입니다. 실제 컨테이너는 중지하지 않고 로그만 출력합니다.
+
 ```bash
 docker compose up --build
+```
+
+실제 컨테이너 stop/restart까지 실행하려면 아래처럼 실행합니다.
+
+```bash
+REMEDIATION_DRY_RUN=false docker compose up -d --build
 ```
 
 | 서비스 | 주소 |
@@ -104,10 +115,12 @@ docker compose --profile datagen up event-generator
 |---|---|
 | 실시간 대시보드 | 탐지 이벤트 목록, 위험도별 통계, 시간대별 타임라인 |
 | 로그 모니터링 | rule_name + AI insight + 처리 상태 확인 |
+| 자동 대응 | action이 stop이면 bridge가 Docker SDK로 즉시 컨테이너 중지 |
 | 승인/롤백 | 담당자가 LLM 추천 action을 승인하거나 직접 수정 후 Playbook 저장 |
 | Playbook 학습 | 승인된 결과가 누적될수록 LLM 없이 처리되는 비율 증가 |
 | VectorDB 검색 | 새 공격이 기존 Playbook과 유사하면 LLM 컨텍스트로 활용 |
 | 보안 어시스턴트 | 자연어로 이벤트 조회, 분석 요청, 승인/롤백 처리 가능 |
+| Allowlist 보호 | falco, falcosidekick, chroma, backend, bridge는 stop/restart 금지 |
 | CSV 리포트 | 전체 이벤트 내역 다운로드 |
 
 ---
@@ -139,6 +152,40 @@ docker compose --profile datagen up event-generator
 
 ---
 
+## Dashboard 롤백 분기
+
+원상 복구 버튼은 llm_action 기준으로 동작합니다.
+
+| llm_action | 원상 복구 동작 |
+|---|---|
+| stop | 확인 후 restart (컨테이너 재시작) |
+| alert | 모달에서 stop / ignore 선택 |
+| ignore | 확인 후 stop (컨테이너 중지) |
+
+---
+
+## 실제 컨테이너 대응 테스트
+
+```bash
+# 1. dry-run 끄고 재시작
+REMEDIATION_DRY_RUN=false docker compose up -d --build chroma backend bridge
+
+# 2. 희생 컨테이너 준비
+docker run -d --name demo-target nginx
+
+# 3. 공격 발생
+docker exec demo-target sh -c "cat /etc/shadow"
+
+# 4. 컨테이너 중지 확인
+docker ps -a | grep demo-target
+# → Exited 상태면 성공
+
+# 5. 정리
+docker rm -f demo-target
+```
+
+---
+
 ## 주요 API
 
 | Method | Path | 설명 |
@@ -155,5 +202,5 @@ docker compose --profile datagen up event-generator
 
 ## 참고
 
-- `backend/.env`는 Git에 올리지 않습니다.
-- 현재 추천된 action(stop/alert/ignore)은 Dashboard에 표시되며, 실제 컨테이너 중지/차단은 실행되지 않습니다.
+- `REMEDIATION_DRY_RUN=true`가 기본값입니다. 실제 대응 테스트는 명시적으로 `false`로 실행하세요.
+- bridge는 실제 Docker 대응을 위해 `/var/run/docker.sock`을 마운트합니다.
