@@ -1,0 +1,70 @@
+services:
+
+  chroma:
+    image: chromadb/chroma:latest
+    ports:
+      - "${CHROMA_HOST_PORT:-8000}:8000"
+    volumes:
+      - chroma-data:/data
+
+  backend:
+    build: ./backend
+    ports:
+      - "${BACKEND_HOST_PORT:-8081}:8080"
+    env_file: ./backend/.env
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - chroma
+
+  bridge:
+    build: ./bridge
+    ports:
+      - "${BRIDGE_HOST_PORT:-5001}:5000"
+    environment:
+      - BACKEND_URL=http://backend:8080
+    depends_on:
+      - backend
+
+  falcosidekick:
+    image: falcosecurity/falcosidekick:latest
+    ports:
+      - "2801:2801"
+    environment:
+      - WEBHOOK_ADDRESS=http://bridge:5000/webhook
+    depends_on:
+      - bridge
+
+  falco:
+    image: falcosecurity/falco-no-driver:latest
+    privileged: true
+    pid: host
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - /proc:/host/proc:ro
+      - /boot:/host/boot:ro
+      - /lib/modules:/host/lib/modules:ro
+      - /usr:/host/usr:ro
+      - /etc:/host/etc:ro
+    command: >
+      falco
+      -o json_output=true
+      -o http_output.enabled=true
+      -o "http_output.url=http://falcosidekick:2801"
+    depends_on:
+      - falcosidekick
+
+  # 테스트용 이벤트 생성기 — docker compose --profile datagen up event-generator
+  event-generator:
+    image: falcosecurity/event-generator:latest
+    profiles:
+      - datagen
+    command: run syscall
+    privileged: true
+    pid: host
+
+volumes:
+  chroma-data:
