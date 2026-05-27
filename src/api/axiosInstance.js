@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8080', // 백엔드 서버 주소 (필요시 변경)
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -25,9 +25,16 @@ export const socAPI = {
   
   // 6. 챗봇 질의 
   postChat: (message) => api.post('/api/v1/copilot/chat', { message }),
+
+  getChatHistory: () => api.get('/api/v1/copilot/history'),
+
+  deleteChatHistory: () => api.delete('/api/v1/copilot/history'),
   
   // 7. 리포트 내보내기 
-  exportReport: () => api.get('/api/v1/reports/export', { responseType: 'blob' })
+  exportReport: () => api.get('/api/v1/reports/export', { responseType: 'blob' }),
+
+  // 8. 플레이북 전체 조회
+  getPlaybooks: () => api.get('/api/v1/playbooks')
 };
 
 export default api;

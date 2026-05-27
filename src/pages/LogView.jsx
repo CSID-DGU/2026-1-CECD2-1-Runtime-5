@@ -1,37 +1,54 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { socAPI } from '../api/axiosInstance';
-import { PiTableBold, PiDownloadSimpleBold, PiWarningCircleBold, PiSkullBold, PiInfoBold } from "react-icons/pi";
+import { PiTableBold, PiDownloadSimpleBold } from "react-icons/pi";
 import './LogView.css';
 
 const LogView = () => {
-  // 💡 백엔드 연결 전 UI 확인용 임시 더미 데이터 추가!
-  const [logs, setLogs] = useState([
-    { id: 'EV-1029', timestamp: '2026-03-26 14:02:11', severity: 'CRITICAL', status: 'PENDING', title: 'Falco: Shell detected inside container' },
-    { id: 'EV-1028', timestamp: '2026-03-26 14:01:55', severity: 'HIGH', status: 'AUTO_ACTIONED', title: 'Unexpected outbound connection' },
-    { id: 'EV-1027', timestamp: '2026-03-26 13:50:03', severity: 'INFO', status: 'RESOLVED_MANUAL', title: 'Pod scaled out: backend' },
-    { id: 'EV-1026', timestamp: '2026-03-26 13:45:12', severity: 'MEDIUM', status: 'CONFIRMED', title: 'Suspicious Ping Command' }
-  ]);
+  const [logs, setLogs] = useState([]);
 
-  useEffect(() => {
-    // 실제 API 연동 로직 (통신 성공 시 진짜 데이터로 덮어씌움)
-    socAPI.getEvents()
-      .then(res => {
-        if (res.data && res.data.length > 0) setLogs(res.data);
-      })
-      .catch(err => {
-        console.error("백엔드 연결 대기 중... (현재 더미 데이터 표시 중):", err);
-      });
+  const fetchLogs = useCallback(async () => {
+    try {
+      const res = await socAPI.getEvents();
+      setLogs(res.data || []);
+    } catch (err) {
+      console.error("로그 데이터를 불러오지 못했습니다:", err);
+    }
   }, []);
 
-  // 심각도(Severity)에 따라 아이콘을 다르게 보여주는 함수
-  const getSeverityIcon = (sev) => {
-    if (!sev) return <PiInfoBold className="sev-icon info" />;
-    switch(sev.toUpperCase()) {
-      case 'CRITICAL': return <PiSkullBold className="sev-icon critical" />;
-      case 'HIGH': return <PiWarningCircleBold className="sev-icon high" />;
-      default: return <PiInfoBold className="sev-icon info" />;
+  useEffect(() => {
+    // 페이지 진입 시 즉시 최신 로그를 가져오고, 이후 3초마다 state만 갱신합니다.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchLogs();
+
+    const intervalId = setInterval(() => {
+      void fetchLogs();
+    }, 3000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [fetchLogs]);
+
+  const getBarColor = (priority, status) => {
+    if (status === 'CONFIRMED') return '#10b981';
+    switch ((priority || '').toUpperCase()) {
+      case 'CRITICAL': return '#ef4444';
+      case 'HIGH':     return '#f97316';
+      case 'WARNING':  return '#f59e0b';
+      default:         return '#3b82f6';
     }
-  }
+  };
+
+  const getBadgeStyle = (status) => {
+    const base = { fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '4px', whiteSpace: 'nowrap' };
+    switch ((status || '').toUpperCase()) {
+      case 'AUTO_ACTIONED': return { ...base, background: '#fed7aa', color: '#9a3412' };
+      case 'CONFIRMED':     return { ...base, background: '#bbf7d0', color: '#14532d' };
+      case 'ROLLED_BACK':   return { ...base, background: '#e5e7eb', color: '#374151' };
+      case 'PENDING':       return { ...base, background: '#fecaca', color: '#7f1d1d' };
+      default:              return { ...base, background: '#e5e7eb', color: '#374151' };
+    }
+  };
 
   // 리포트 내보내기 버튼 이벤트
   const handleExport = async () => {
@@ -40,12 +57,12 @@ const LogView = () => {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'security_report.pdf');
+      link.setAttribute('download', 'security_report.csv');
       document.body.appendChild(link);
       link.click();
       link.remove();
-    } catch (error) {
-      alert("백엔드 통신 실패. (리포트 다운로드 기능은 백엔드 서버가 켜져야 작동합니다!)");
+    } catch {
+      alert("리포트 다운로드에 실패했습니다. 백엔드 상태를 확인해주세요.");
     }
   };
 
@@ -68,13 +85,16 @@ const LogView = () => {
         </div>
         <div className="log-items">
           {logs.map(log => (
-            <div key={log.id} className={`log-item ${log.severity?.toLowerCase()}`}>
-              <div className="log-meta">
-                {getSeverityIcon(log.severity)}
-                <span className="timestamp">{log.timestamp}</span>
+            <div key={log.id} style={{ display: 'flex', alignItems: 'stretch', background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '8px', marginBottom: '8px', overflow: 'hidden' }}>
+              <div style={{ width: '4px', flexShrink: 0, background: getBarColor(log.priority, log.status) }} />
+              <div style={{ flex: 1, padding: '12px 16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <span style={{ fontWeight: '700', fontSize: '14px', color: '#111827' }}>{log.rule_name}</span>
+                  <span style={getBadgeStyle(log.status)}>{log.status}</span>
+                </div>
+                <div style={{ color: '#6b7280', fontSize: '13px', marginBottom: '4px' }}>{log.llm_insight}</div>
+                <div style={{ color: '#9ca3af', fontSize: '11px' }}>{log.timestamp} · {log.id}</div>
               </div>
-              <span className="message">[{log.status}] {log.title}</span>
-              <span className="log-id">ID: {log.id}</span>
             </div>
           ))}
           {/* 로그가 0개일 때 보여줄 메시지 */}

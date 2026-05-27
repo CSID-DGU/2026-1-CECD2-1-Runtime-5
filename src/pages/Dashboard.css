@@ -194,3 +194,88 @@
 .close-btn { position: absolute; top: 20px; right: 20px; background: none; border: none; cursor: pointer; color: #64748b; }
 .detail-body { margin-top: 20px; line-height: 1.6; }
 .playbook-box { background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 15px; }
+
+.rollback-modal {
+  background: #fff;
+  padding: 28px;
+  border-radius: 8px;
+  width: 420px;
+  max-width: 90%;
+  position: relative;
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+}
+
+.rollback-modal h2 {
+  margin: 0 36px 8px 0;
+  font-size: 20px;
+  color: #111827;
+}
+
+.rollback-event-id {
+  margin: 0 0 18px 0;
+  color: #64748b;
+  font-size: 13px;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.rollback-options {
+  display: grid;
+  gap: 10px;
+}
+
+.rollback-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.rollback-option:has(input:checked) {
+  border-color: #ef4444;
+  background: #fff5f5;
+}
+
+.rollback-option input {
+  margin: 0;
+}
+
+.rollback-action {
+  min-width: 48px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.rollback-description {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.rollback-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.rollback-cancel-btn,
+.rollback-confirm-btn {
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rollback-cancel-btn {
+  background: #fff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.rollback-confirm-btn {
+  background: #ef4444;
+  color: #fff;
+  border: 1px solid #ef4444;
+}
