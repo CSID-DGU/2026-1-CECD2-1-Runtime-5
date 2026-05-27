@@ -1,6 +1,9 @@
 # Runtime Security Service
 
-Falco로 컨테이너 런타임 보안 이벤트를 탐지하고, backend와 frontend에서 이벤트를 확인하는 서비스입니다.
+컨테이너 런타임 보안 이벤트 탐지 및 자동 대응 서비스.
+Falco가 위협을 탐지하면 LLM이 action을 추천하고,
+보안 담당자가 승인한 결과는 Playbook으로 축적되어
+이후 동일 공격에 LLM 없이 즉시 대응합니다.
 
 ## 폴더 구조
 
