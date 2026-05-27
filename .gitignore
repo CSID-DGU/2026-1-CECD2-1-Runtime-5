@@ -1,0 +1,42 @@
+# Environment and secrets
+.env
+.env.*
+backend/.env
+*.local
+
+# Runtime data
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+
+# Docker
+*.pid
+*.log
+logs/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# AI tooling
+.claude/
+.codex/
+.agents/
+IMPLEMENTATION.md
+
+# Chroma
+chroma-data/
+EOF
+frontend/
