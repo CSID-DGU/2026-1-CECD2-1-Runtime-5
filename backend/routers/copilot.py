@@ -34,8 +34,12 @@ ACTION_TOOL = {
                 },
                 "manual_action": {
                     "type": "string",
-                    "enum": ["stop", "alert", "ignore"],
-                    "description": "관리자가 직접 지정하는 action",
+                    "enum": ["stop", "alert", "ignore", "restart"],
+                    "description": (
+                        "관리자가 직접 지정하는 action. "
+                        "stop=컨테이너중지, restart=컨테이너재시작, "
+                        "alert=알림만, ignore=무시"
+                    ),
                 },
             },
             "required": ["event_id", "decision"],
@@ -47,7 +51,7 @@ ACTION_TOOL = {
 def _get_event(event_id: str):
     conn = get_connection()
     row = conn.execute(
-        "SELECT id, rule_name, llm_action, status FROM events WHERE id = ?",
+        "SELECT id, rule_name, llm_action, status FROM events WHERE id = %s",
         (event_id,),
     ).fetchone()
     conn.close()
@@ -114,6 +118,9 @@ def _normalize_action_arguments(message: str, arguments: dict) -> dict:
     if any(token in lowered for token in ["ignore", "무시"]):
         normalized["decision"] = "ROLLED_BACK"
         normalized["manual_action"] = "ignore"
+    elif any(token in lowered for token in ["restart", "재시작", "다시 시작"]):
+        normalized["decision"] = "ROLLED_BACK"
+        normalized["manual_action"] = "restart"
     elif any(token in lowered for token in ["stop", "중지", "정지"]):
         normalized["decision"] = "ROLLED_BACK"
         normalized["manual_action"] = "stop"
@@ -163,6 +170,7 @@ def post_chat(body: dict):
                     "'승인'은 decision=CONFIRMED로 처리하세요.\n"
                     "'rollback', '롤백', '원상 복구', '무시'는 decision=ROLLED_BACK로 처리하세요.\n"
                     "'무시'는 manual_action=ignore로 처리하세요.\n\n"
+                    "'restart', '재시작', '다시 시작'은 manual_action=restart로 처리하세요.\n\n"
                     f"최근 탐지 이벤트:\n{context}"
                 ),
             },
@@ -195,7 +203,7 @@ def post_chat(body: dict):
     now = now_iso()
     conn.executemany("""
         INSERT INTO chat_messages (sender, message, created_at)
-        VALUES (?, ?, ?)
+        VALUES (%s, %s, %s)
     """, [
         ("user", message, now),
         ("bot", reply, now),
