@@ -10,7 +10,7 @@ from time_utils import now_iso
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
 REMEDIATION_DRY_RUN = os.getenv("REMEDIATION_DRY_RUN", "true").lower() == "true"
-REMEDIATION_ALLOWLIST = {"falco", "falcosidekick", "chroma", "backend", "bridge"}
+REMEDIATION_ALLOWLIST = {"falco", "falcosidekick", "backend", "bridge"}
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("bridge")
@@ -147,6 +147,9 @@ async def handle_falco_alert(payload: FalcoPayload):
     output_fields = payload.output_fields or {}
     cmdline  = str(output_fields.get("proc.cmdline", ""))
     container_name = _extract_container_target(output_fields)
+
+    if any(skip in (cmdline or "") or skip in (output or "") for skip in ["pg_isready", "healthcheck"]):
+        return {"status": "skipped", "reason": "healthcheck_noise"}
 
     async with httpx.AsyncClient() as client:
         # Step 1: LLM 분석
