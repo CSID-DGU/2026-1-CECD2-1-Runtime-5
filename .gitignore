@@ -15,6 +15,10 @@ __pycache__/
 *.pyo
 *.pyd
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 .venv/
 venv/
 
@@ -23,12 +27,20 @@ venv/
 *.log
 logs/
 
+# Postgres dumps
+*.sql.gz
+*.dump
+
 # OS / editor
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+*.swp
+*.swo
+*~
+*.bak
 
 # AI tooling
 .claude/
@@ -36,7 +48,4 @@ Thumbs.db
 .agents/
 IMPLEMENTATION.md
 
-# Chroma
-chroma-data/
-EOF
 frontend/
