@@ -7,13 +7,15 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
 def get_insight_only(rule: str, priority: str, output: str, cmdline: str) -> str:
-    prompt = f"""컨테이너 보안 이벤트가 탐지되었습니다.
-- Rule: {rule}
-- Priority: {priority}
-- Command: {cmdline}
-- Output: {output}
+    prompt = f"""Assess this container security event.
 
-이 이벤트가 왜 위험한지 한국어로 한 줄로 설명해주세요."""
+Event:
+ Rule: {rule}
+ Priority: {priority}
+ Command: {cmdline}
+
+Output JSON only:
+{{"insight": "한국어로 한 줄 설명"}}"""
 
     response = openai.chat.completions.create(
         model="gpt-4o-mini",
@@ -42,26 +44,21 @@ def _format_playbook_examples(playbook_examples: list[dict]) -> str:
 
 def analyze_event(rule: str, priority: str, output: str, cmdline: str, playbook_examples: list[dict] | None = None) -> dict:
     examples = _format_playbook_examples(playbook_examples or [])
-    prompt = f"""You are a container runtime security analyst.
+    prompt = f"""Assess this container security event and respond in JSON only.
 
-Falco detected the following security event:
-- Rule: {rule}
-- Priority: {priority}
-- Command: {cmdline}
-- Output: {output}
+Event:
+ Rule: {rule}
+ Priority: {priority}
+ Command: {cmdline}
 
-Top matching playbooks retrieved from the playbook VectorDB:
+Similar playbook cases from VectorDB:
 {examples}
 
-Use the VectorDB similarity scores and approved actions as evidence. If the new event is close to
-a stop playbook, recommend stop. If it is closer to an alert playbook, recommend alert. Use ignore
-only when the event is clearly benign.
-
-Respond in JSON only:
+Output JSON only:
 {{
   "action": "stop|alert|ignore",
   "insight": "한국어로 한 줄 설명",
-  "playbook_reason": "VectorDB에서 검색된 어떤 playbook 사례를 근거로 삼았는지 한국어로 한 줄 설명"
+  "playbook_reason": "참고한 playbook 근거 한국어 한 줄"
 }}"""
 
     response = openai.chat.completions.create(
