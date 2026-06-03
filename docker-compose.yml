@@ -1,11 +1,25 @@
 services:
 
-  chroma:
-    image: chromadb/chroma:latest
+  postgres:
+    image: pgvector/pgvector:pg16
     ports:
-      - "${CHROMA_HOST_PORT:-8000}:8000"
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_DB=runtime_security
+      - POSTGRES_USER=runtime
+      - POSTGRES_PASSWORD=runtime1234
     volumes:
-      - chroma-data:/data
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U runtime -d runtime_security"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
 
   backend:
     build: ./backend
@@ -13,12 +27,14 @@ services:
       - "${BACKEND_HOST_PORT:-8081}:8080"
     env_file: ./backend/.env
     environment:
-      - CHROMA_HOST=chroma
-      - CHROMA_PORT=8000
+      - DATABASE_URL=postgresql://runtime:runtime1234@postgres:5432/runtime_security
     volumes:
       - ./backend:/app
     depends_on:
-      - chroma
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   bridge:
     build: ./bridge
@@ -70,4 +86,4 @@ services:
     pid: host
 
 volumes:
-  chroma-data:
+  postgres-data:

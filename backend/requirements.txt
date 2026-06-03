@@ -3,4 +3,5 @@ uvicorn
 openai
 python-dotenv
 httpx
-chromadb-client
+psycopg2-binary
+redis
