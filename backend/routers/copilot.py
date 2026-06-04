@@ -64,7 +64,7 @@ def _format_action_reply(result: dict) -> str:
 
     decision_label = "승인" if result["decision"] == "CONFIRMED" else "롤백"
     lines = [f"{result['event_id']} {decision_label} 완료"]
-    if result.get("playbook_saved") and result.get("action"):
+    if result.get("playbook_saved") and result.get("action") and result.get("manual_action") != "restart":
         lines.append(f"action: {result['action']} → playbook 저장됨")
     return "\n".join(lines)
 
