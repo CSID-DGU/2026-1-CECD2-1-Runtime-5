@@ -81,8 +81,41 @@ const Dashboard = () => {
     }
   };
 
+  const submitRollbackDecision = async (eventId, manualAction) => {
+    try {
+      await api.patch(`/api/v1/events/${eventId}/decision`, {
+        decision: 'ROLLED_BACK',
+        manual_action: manualAction,
+      });
+      alert(`[${eventId}] 원상 복구 후 ${manualAction} 조치가 저장되었습니다.`);
+      await fetchDashboardData();
+    } catch {
+      alert("백엔드 API 통신 실패 (서버가 켜져 있는지 확인해주세요).");
+    }
+  };
+
   const openRollbackModal = (eventId) => {
     setRollbackModal({ eventId, action: 'stop' });
+  };
+
+  const handleRollbackClick = async (event) => {
+    const llmAction = (event.llm_action || '').toLowerCase();
+
+    if (llmAction === 'stop') {
+      if (window.confirm("컨테이너를 재시작합니다. 진행할까요?")) {
+        await submitRollbackDecision(event.id, 'restart');
+      }
+      return;
+    }
+
+    if (llmAction === 'ignore') {
+      if (window.confirm("컨테이너를 중지합니다. 진행할까요?")) {
+        await submitRollbackDecision(event.id, 'stop');
+      }
+      return;
+    }
+
+    openRollbackModal(event.id);
   };
 
   const closeRollbackModal = () => {
@@ -92,17 +125,9 @@ const Dashboard = () => {
   const handleRollbackConfirm = async () => {
     if (!rollbackModal.eventId) return;
 
-    try {
-      await api.patch(`/api/v1/events/${rollbackModal.eventId}/decision`, {
-        decision: 'ROLLED_BACK',
-        manual_action: rollbackModal.action,
-      });
-      alert(`[${rollbackModal.eventId}] 원상 복구 후 ${rollbackModal.action} 조치가 저장되었습니다.`);
-      closeRollbackModal();
-      await fetchDashboardData();
-    } catch {
-      alert("백엔드 API 통신 실패 (서버가 켜져 있는지 확인해주세요).");
-    }
+    const { eventId, action } = rollbackModal;
+    closeRollbackModal();
+    await submitRollbackDecision(eventId, action);
   };
 
   return (
@@ -198,7 +223,7 @@ const Dashboard = () => {
                 {event.status === 'AUTO_ACTIONED' && (
                   <>
                     <button className="action-btn confirm"  onClick={(e) => { e.stopPropagation(); handleDecision(event.id, 'CONFIRMED'); }}>조치 승인</button>
-                    <button className="action-btn rollback" onClick={(e) => { e.stopPropagation(); openRollbackModal(event.id); }}>원상 복구</button>
+                    <button className="action-btn rollback" onClick={(e) => { e.stopPropagation(); handleRollbackClick(event); }}>원상 복구</button>
                   </>
                 )}
               </div>
@@ -244,8 +269,7 @@ const Dashboard = () => {
 
             <div className="rollback-options" role="radiogroup" aria-label="관리자 조치 선택">
               {[
-                { value: 'stop', label: 'stop', description: '컨테이너 중지' },
-                { value: 'alert', label: 'alert', description: '알림만 발송' },
+                { value: 'stop', label: 'stop', description: '컨테이너 중지 (위협으로 판단)' },
                 { value: 'ignore', label: 'ignore', description: '무시' },
               ].map((option) => (
                 <label key={option.value} className="rollback-option">
