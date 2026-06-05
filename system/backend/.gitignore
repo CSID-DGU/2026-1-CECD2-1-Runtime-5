@@ -1,0 +1,51 @@
+# Environment and secrets
+.env
+.env.*
+backend/.env
+*.local
+
+# Runtime data
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Docker
+*.pid
+*.log
+logs/
+
+# Postgres dumps
+*.sql.gz
+*.dump
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+*.bak
+
+# AI tooling
+.claude/
+.codex/
+.agents/
+IMPLEMENTATION.md
+
+frontend/
