@@ -1,0 +1,79 @@
+services:
+  # 1. 분석 엔진 (Ollama)
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=5m
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    restart: unless-stopped
+
+  # 2. 탐지기 (Falco) — 특권 권한 및 볼륨 마운트 필수
+  falco:
+    image: falcosecurity/falco:latest
+    container_name: falco
+    privileged: true
+    volumes:
+      - ./falco/forward-to-sidekick.yaml:/etc/falco/config.d/zz-forward-to-sidekick.yaml:ro
+      - ./falco/falco_rules.local.yaml:/etc/falco/falco_rules.local.yaml:ro
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - /dev:/host/dev
+      - /proc:/host/proc:ro
+      - /boot:/host/boot:ro
+      - /lib/modules:/host/lib/modules:ro
+      - /usr:/host/usr:ro
+    restart: always
+
+  # 3. 이벤트 중계기 (Falcosidekick)
+  falcosidekick:
+    image: falcosecurity/falcosidekick:latest
+    container_name: falcosidekick
+    environment:
+      - DEBUG=true
+      - WEBHOOK_ADDRESS=http://python-bridge:5000/webhook
+    depends_on:
+      - falco
+    restart: unless-stopped
+
+  # 5. 실험 파이프라인 브리지
+  python-bridge:
+    build: ./bridge
+    container_name: python-bridge
+    ports:
+      - "5000:5000"
+    environment:
+      - ENABLE_REMEDIATION=true
+      - REMEDIATION_DRY_RUN=true
+      - REMEDIATION_EXCLUDE=falco,falcosidekick,python-bridge,ollama,falco-event-generator
+      - DATA_DIR=/app/data
+      - EXPERIMENT_MODE=proposed
+      - IS_ATTACK=true
+      - CACHE_TTL=300
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./bridge_data:/app/data
+      - ./models:/app/models
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+  # 6. 실험용 공격 이벤트 생성기 — Falco 기본 룰 19개 트리거
+  # 평소엔 실행 안 됨, 데이터 수집 시에만: docker-compose --profile datagen up -d event-generator
+  event-generator:
+    image: falcosecurity/event-generator:latest
+    container_name: falco-event-generator
+    command: run syscall --loop
+    environment:
+      - FALCO_GENERATOR_LOOP=true
+    depends_on:
+      - falco
+    restart: "no"
+    profiles:
+      - datagen

@@ -1,0 +1,7 @@
+mode,total,llm_calls,llm_rate,llm_reduction,prompt_tokens,completion_tokens,total_tokens,token_reduction,avg_latency_ms,cache_hits,cache_rate
+baseline_a,200,153,76.5%,기준,57334,10406,67740,기준,6783.4,0,0.0%
+baseline_b,200,0,0.0%,100.0% ↓,0,0,0,100.0% ↓,0.0,0,0.0%
+proposed(ttl=3600s),200,14,7.0%,90.8% ↓,5171,890,6061,91.1% ↓,605.6,139,69.5%
+proposed(ttl=30s),200,137,68.5%,10.5% ↓,50875,9209,60084,11.3% ↓,6106.8,16,8.0%
+proposed(ttl=60s),200,133,66.5%,13.1% ↓,49401,8857,58258,14.0% ↓,6051.0,20,10.0%
+proposed(ttl=300s),200,28,14.0%,81.7% ↓,10347,2048,12395,81.7% ↓,1230.2,125,62.5%
