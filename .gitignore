@@ -48,4 +48,44 @@ Thumbs.db
 .agents/
 IMPLEMENTATION.md
 
+# Frontend
 frontend/
+
+# Generated scan reports
+zap_reports/*.html
+zap_reports/*.json
+zap_reports/*.md
+
+# Local model data and credentials
+models/
+ollama_data/
+
+# Generated runtime data
+attack_logs/*.jsonl
+bridge_data/*.jsonl
+
+# Local tool state
+.tmp_remote_inspect/
+.codex
+
+# Python cache
+dist
+dist-ssr
+node_modules
+
+# Logs
+*.njsproj
+*.ntvs*
+*.sln
+*.suo
+*.sw?
+lerna-debug.log*
+logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS/editor noise
+.idea
+!.env.example
