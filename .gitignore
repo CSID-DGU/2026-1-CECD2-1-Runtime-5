@@ -1,0 +1,79 @@
+﻿
+!.env.example
+!.vscode/extensions.json
+# AI tooling
+# Docker
+# Editor directories and files
+# Environment and secrets
+# Environment files and secrets
+# Generated runtime data
+# Generated scan reports
+# Local model data and credentials
+# Local tool state
+# Logs
+# OS / editor
+# OS/editor noise
+# Postgres dumps
+# Python
+# Python cache
+# Runtime data
+*.bak
+*.db
+*.dump
+*.local
+*.log
+*.njsproj
+*.ntvs*
+*.pid
+*.py[cod]
+*.pyd
+*.pyo
+*.sln
+*.sql.gz
+*.sqlite
+*.sqlite3
+*.suo
+*.sw?
+*.swo
+*.swp
+*~
+.agents/
+.claude/
+.codex
+.codex/
+.coverage
+.DS_Store
+.env
+.env.*
+.idea
+.idea/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.tmp_remote_inspect/
+.venv/
+.vscode/*
+__pycache__/
+attack_logs/*.jsonl
+backend/.env
+bridge_data/*.jsonl
+dist
+dist-ssr
+frontend/
+htmlcov/
+IMPLEMENTATION.md
+lerna-debug.log*
+logs
+logs/
+models/
+node_modules
+npm-debug.log*
+ollama_data/
+pnpm-debug.log*
+Thumbs.db
+venv/
+yarn-debug.log*
+yarn-error.log*
+zap_reports/*.html
+zap_reports/*.json
+zap_reports/*.md
