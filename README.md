@@ -11,7 +11,7 @@
 ### 🔬 [Research](./research) — 효율화 연구 및 실험
 LLM 호출을 최소화하고 응답 성능을 극대화하기 위한 실험 환경입니다.
 - **[Cache Optimization](./research/cache)**: **Semantic Cache**를 활용하여 동일하거나 유사한 보안 이벤트에 대해 LLM 재호출 없이 즉각적인 대응 결과를 반환하는 연구를 수행합니다.
-- **[Prompt Optimization](./research/prompt)**: 보안 컨텍스트를 유지하면서도 토큰 소비를 극소화하는 **프롬프트 압축 전략(V1~V3)**을 설계하고 성능을 검증합니다.
+- **[Prompt Optimization](./research/prompt)**: 보안 컨텍스트를 유지하면서도 토큰 소비를 극소화하는 **프롬프트 압축 전략(V1~V3)** 을 설계하고 성능을 검증합니다.
 
 ### 🚀 [System](./system) — 통합 보안 서비스 구현
 연구 결과를 바탕으로 구축된 실제 운영 가능한 보안 탐지 및 대응 서비스입니다.
