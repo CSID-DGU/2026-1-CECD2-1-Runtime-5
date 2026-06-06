@@ -1,79 +1,91 @@
-﻿
-!.env.example
-!.vscode/extensions.json
-# AI tooling
-# Docker
-# Editor directories and files
 # Environment and secrets
-# Environment files and secrets
-# Generated runtime data
-# Generated scan reports
-# Local model data and credentials
-# Local tool state
-# Logs
-# OS / editor
-# OS/editor noise
-# Postgres dumps
-# Python
-# Python cache
-# Runtime data
-*.bak
-*.db
-*.dump
-*.local
-*.log
-*.njsproj
-*.ntvs*
-*.pid
-*.py[cod]
-*.pyd
-*.pyo
-*.sln
-*.sql.gz
-*.sqlite
-*.sqlite3
-*.suo
-*.sw?
-*.swo
-*.swp
-*~
-.agents/
-.claude/
-.codex
-.codex/
-.coverage
-.DS_Store
 .env
 .env.*
-.idea
-.idea/
-.mypy_cache/
-.pytest_cache/
-.ruff_cache/
-.tmp_remote_inspect/
-.venv/
-.vscode/*
+**/backend/.env
+*.local
+
+# Runtime data
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
 __pycache__/
-attack_logs/*.jsonl
-backend/.env
-bridge_data/*.jsonl
-dist
-dist-ssr
-frontend/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
 htmlcov/
-IMPLEMENTATION.md
-lerna-debug.log*
-logs
-logs/
-models/
-node_modules
-npm-debug.log*
-ollama_data/
-pnpm-debug.log*
-Thumbs.db
+.venv/
 venv/
-yarn-debug.log*
-yarn-error.log*
+
+# Docker
+*.pid
+*.log
+logs/
+
+# Postgres dumps
+*.sql.gz
+*.dump
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+*.bak
+
+# AI tooling
+.claude/
+.codex/
+.agents/
+IMPLEMENTATION.md
+
+# Frontend
+frontend/
+
+# Generated scan reports
 zap_reports/*.html
 zap_reports/*.json
 zap_reports/*.md
+
+# Local model data and credentials
+models/
+ollama_data/
+
+# Generated runtime data
+attack_logs/*.jsonl
+bridge_data/*.jsonl
+
+# Local tool state
+.tmp_remote_inspect/
+.codex
+
+# Python cache
+dist
+dist-ssr
+node_modules
+
+# Logs
+*.njsproj
+*.ntvs*
+*.sln
+*.suo
+*.sw?
+lerna-debug.log*
+logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS/editor noise
+.idea
+!.env.example
