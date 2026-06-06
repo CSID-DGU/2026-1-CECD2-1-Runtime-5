@@ -1,12 +1,12 @@
 # Runtime Security & LLM Optimization Project (Runtime-5)
 
-본 프로젝트는 컨테이너 런타임 보안 도구인 **Falco**에서 발생하는 보안 이벤트를 **LLM(Large Language Model)**으로 분석하고 대응하는 과정에서, **비용 절감(Token Efficiency)**과 **응답 속도 향상(Latency Reduction)**을 달성하기 위한 연구 및 실제 시스템 구현을 포함합니다.
+본 프로젝트는 컨테이너 런타임 보안 도구인 **Falco**에서 발생하는 보안 이벤트를 **LLM(Large Language Model)** 으로 분석하고 대응하는 과정에서, **비용 절감(Token Efficiency)** 과 **응답 속도 향상(Latency Reduction)** 을 달성하기 위한 연구 및 실제 시스템 구현을 포함합니다.
 
 ---
 
 ## 📂 프로젝트 구조
 
-프로젝트는 크게 **연구(Research)**와 **시스템(System)** 두 개의 영역으로 나뉩니다.
+프로젝트는 크게 **연구(Research)** 와 **시스템(System)** 두 개의 영역으로 나뉩니다.
 
 ### 🔬 [Research](./research) — 효율화 연구 및 실험
 LLM 호출을 최소화하고 응답 성능을 극대화하기 위한 실험 환경입니다.
