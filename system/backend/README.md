@@ -1,13 +1,10 @@
-# Runtime Security Service
+# Runtime Security System Backend
 
-## 1. 프로젝트 소개
-
-컨테이너 런타임 보안 이벤트 탐지 및 자동 대응 서비스.
-Falco 탐지 → LLM 분석 → 자동 대응 → Human-in-the-loop Playbook 학습.
+본 백엔드 서비스는 컨테이너 런타임 보안 이벤트를 수신하여 AI 기반으로 분석하고 자동 대응하는 핵심 파이프라인을 제공합니다. `research` 영역에서 검증된 Semantic Cache 및 프롬프트 최적화 전략이 통합되어 구현되어 있습니다.
 
 ---
 
-## 2. 전체 흐름
+## 1. 주요 기능
 
 ```
 공격 발생

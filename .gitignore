@@ -1,91 +1,39 @@
+# Local data (Ignored)
+models/
+ollama_data/
+_legacy_backup/
+organized_repo/
+source_repo/
+tmp_main/
+
 # Environment and secrets
 .env
 .env.*
 **/backend/.env
 *.local
 
-# Runtime data
-*.db
-*.sqlite
-*.sqlite3
+# Node.js
+node_modules/
+dist/
+dist-ssr/
+*.local
 
 # Python
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
 .venv/
 venv/
 
-# Docker
-*.pid
+# Logs
 *.log
 logs/
+bridge_data/*.jsonl
+attack_logs/*.jsonl
 
-# Postgres dumps
-*.sql.gz
-*.dump
-
-# OS / editor
+# OS / Editor
 .DS_Store
 Thumbs.db
+.vscode/
 .idea/
-.vscode/*
-!.vscode/extensions.json
-*.swp
-*.swo
-*~
-*.bak
-
-# AI tooling
-.claude/
-.codex/
-.agents/
-IMPLEMENTATION.md
-
-# Frontend
-frontend/
-
-# Generated scan reports
-zap_reports/*.html
-zap_reports/*.json
-zap_reports/*.md
-
-# Local model data and credentials
-models/
-ollama_data/
-
-# Generated runtime data
-attack_logs/*.jsonl
-bridge_data/*.jsonl
-
-# Local tool state
-.tmp_remote_inspect/
-.codex
-
-# Python cache
-dist
-dist-ssr
-node_modules
-
-# Logs
-*.njsproj
-*.ntvs*
-*.sln
-*.suo
-*.sw?
-lerna-debug.log*
-logs
-npm-debug.log*
-pnpm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# OS/editor noise
-.idea
-!.env.example
